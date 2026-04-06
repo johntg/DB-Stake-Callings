@@ -153,11 +153,10 @@ function applyData(data) {
 function loadDemoData(message) {
   appState.usingDemoData = true;
   applyData(DEMO_DATA);
-  setHeaderMessage(
-    "Demo mode: connect a deployed Apps Script web app to load live spreadsheet data.",
-  );
+  setHeaderMessage("Demo mode — live data unavailable.");
   setStatusMessage(
     message || "Using demo data until the Apps Script API is configured.",
+    true,
   );
 }
 
@@ -274,9 +273,7 @@ async function loadData() {
     setHeaderMessage("Track calls and releases from your spreadsheet.");
     loaderElement.style.display = "none";
   } catch (error) {
-    loadDemoData(
-      `Could not reach the Apps Script API. Showing demo data instead. (${error.message})`,
-    );
+    loadDemoData(`API error: ${error.message}`);
   }
 }
 
