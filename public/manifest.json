@@ -1,7 +1,7 @@
 {
   "name": "Stake Callings",
   "short_name": "Callings",
-  "description": "Track Church callings and releases from your stake spreadsheet.",
+  "description": "Track Church callings and releases from your Stake spreadsheet.",
   "start_url": "/stake-callings/",
   "scope": "/stake-callings/",
   "display": "standalone",
