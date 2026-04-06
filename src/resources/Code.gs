@@ -26,17 +26,20 @@ function doGet(e) {
   var action = getAction_(e, "initialData");
 
   if (action === "initialData") {
-    return jsonResponse_(getInitialData());
+    return responsePayload_(getInitialData(), e);
   }
 
   if (action === "saveCalling") {
-    return jsonResponse_(saveCalling((e && e.parameter) || {}));
+    return responsePayload_(saveCalling((e && e.parameter) || {}), e);
   }
 
-  return jsonResponse_({
-    success: false,
-    error: 'Unknown GET action: "' + action + '"',
-  });
+  return responsePayload_(
+    {
+      success: false,
+      error: 'Unknown GET action: "' + action + '"',
+    },
+    e,
+  );
 }
 
 function doPost(e) {
@@ -254,4 +257,20 @@ function jsonResponse_(payload) {
   return ContentService.createTextOutput(JSON.stringify(payload)).setMimeType(
     ContentService.MimeType.JSON,
   );
+}
+
+function responsePayload_(payload, e) {
+  var callback = e && e.parameter ? e.parameter.callback : "";
+
+  if (callback && isValidCallbackName_(callback)) {
+    return ContentService.createTextOutput(
+      callback + "(" + JSON.stringify(payload) + ");",
+    ).setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return jsonResponse_(payload);
+}
+
+function isValidCallbackName_(name) {
+  return /^[A-Za-z_$][0-9A-Za-z_$\.]*$/.test(name);
 }

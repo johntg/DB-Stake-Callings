@@ -221,6 +221,52 @@ function getApiUrl(action) {
   return url;
 }
 
+function requestViaJsonp(action, params = {}, timeoutMs = 10000) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `__stakeCallingsJsonp_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const url = getApiUrl(action);
+
+    Object.entries(params).forEach(([key, value]) => {
+      if (value != null) {
+        url.searchParams.set(key, String(value));
+      }
+    });
+
+    url.searchParams.set("callback", callbackName);
+
+    const script = document.createElement("script");
+    let timeoutId;
+
+    function cleanup() {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      if (script.parentNode) {
+        script.parentNode.removeChild(script);
+      }
+      delete window[callbackName];
+    }
+
+    window[callbackName] = (payload) => {
+      cleanup();
+      resolve(payload);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("JSONP request failed to load."));
+    };
+
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error("JSONP request timed out."));
+    }, timeoutMs);
+
+    script.src = url.toString();
+    document.head.appendChild(script);
+  });
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -327,7 +373,39 @@ async function loadData() {
     setHeaderMessage("Track calls and releases from your spreadsheet.");
     loaderElement.style.display = "none";
   } catch (error) {
-    loadDemoData(`API error: ${error.message}`);
+    console.warn(
+      "[Stake Callings] GET fetch failed, retrying with JSONP:",
+      error,
+    );
+
+    try {
+      const jsonpData = await requestViaJsonp("initialData");
+      console.log(
+        "[Stake Callings] Apps Script JSONP response:",
+        JSON.stringify(jsonpData),
+      );
+
+      const hasData =
+        Array.isArray(jsonpData.callings) && jsonpData.callings.length > 0;
+      const isSuccess =
+        jsonpData.success === true ||
+        (jsonpData.success === undefined && hasData);
+
+      if (!isSuccess) {
+        throw new Error(
+          jsonpData.error ||
+            `Apps Script JSONP returned no usable data. Raw: ${JSON.stringify(jsonpData)}`,
+        );
+      }
+
+      appState.usingDemoData = false;
+      applyData(jsonpData);
+      setHeaderMessage("Track calls and releases from your spreadsheet.");
+      loaderElement.style.display = "none";
+      showToast("Connected using compatibility mode.", { type: "success" });
+    } catch (jsonpError) {
+      loadDemoData(`API error: ${jsonpError.message}`);
+    }
   }
 }
 
@@ -384,22 +462,12 @@ async function submitCalling(payload) {
       error,
     );
 
-    const fallbackUrl = getApiUrl("saveCalling");
-    fallbackUrl.searchParams.set("type", payload.type);
-    fallbackUrl.searchParams.set("name", payload.name);
-    fallbackUrl.searchParams.set("position", payload.position);
-    fallbackUrl.searchParams.set("unit", payload.unit);
-
-    const fallbackResponse = await fetch(fallbackUrl, {
-      method: "GET",
-      redirect: "follow",
+    const fallbackResult = await requestViaJsonp("saveCalling", {
+      type: payload.type,
+      name: payload.name,
+      position: payload.position,
+      unit: payload.unit,
     });
-
-    if (!fallbackResponse.ok) {
-      throw new Error(`Fallback save failed (${fallbackResponse.status})`);
-    }
-
-    const fallbackResult = await fallbackResponse.json();
     console.log(
       "[Stake Callings] Save GET fallback response:",
       JSON.stringify(fallbackResult),
