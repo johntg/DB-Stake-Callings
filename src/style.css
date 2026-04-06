@@ -175,6 +175,12 @@ body.modal-open {
   font-size: 0.88rem;
 }
 
+.approval-label {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
 .approval-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
@@ -373,9 +379,5 @@ select {
   .app-toast {
     top: 8px;
     width: 100%;
-  }
-
-  .approval-grid {
-    grid-template-columns: 1fr;
   }
 }

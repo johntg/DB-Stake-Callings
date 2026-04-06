@@ -341,7 +341,7 @@ function renderCards(rows) {
                   data-col-index="6"
                   ${row?.[5] ? "checked" : ""}
                 />
-                <span>S.Pres approved</span>
+                <span class="approval-label"><span>S.Pres</span><span>approved</span></span>
               </label>
               <small class="approval-date">${escapeHtml(row?.[5] || "")}</small>
             </div>
@@ -355,7 +355,7 @@ function renderCards(rows) {
                   data-col-index="7"
                   ${row?.[6] ? "checked" : ""}
                 />
-                <span>SHC sustained</span>
+                <span class="approval-label"><span>SHC</span><span>sustained</span></span>
               </label>
               <small class="approval-date">${escapeHtml(row?.[6] || "")}</small>
             </div>
