@@ -2041,8 +2041,8 @@ listElement.addEventListener("change", async (event) => {
 });
 
 listElement.addEventListener("click", async (event) => {
-  const editableField = event.target.closest('.editable-field');
-  if (editableField && !editableField.querySelector('input')) {
+  const editableField = event.target.closest(".editable-field");
+  if (editableField && !editableField.querySelector("input")) {
     const action = editableField.dataset.action;
     const id = editableField.dataset.id?.trim();
     const currentValue = editableField.dataset.value?.trim() || "";
@@ -2060,16 +2060,20 @@ listElement.addEventListener("click", async (event) => {
     input.type = "text";
     input.value = currentValue;
     input.className = "inline-edit-input";
-    input.style.cssText = "width: 100%; font: inherit; padding: 4px; border: 2px solid #007bff; border-radius: 4px;";
+    input.style.cssText =
+      "width: 100%; font: inherit; padding: 4px; border: 2px solid #007bff; border-radius: 4px;";
 
     // Save function
     const saveEdit = async () => {
       const newValue = input.value.trim();
-      
+
       if (!newValue) {
-        showToast(`${fieldType === "name" ? "Name" : "Position"} cannot be empty.`, {
-          type: "error",
-        });
+        showToast(
+          `${fieldType === "name" ? "Name" : "Position"} cannot be empty.`,
+          {
+            type: "error",
+          },
+        );
         input.focus();
         return;
       }
@@ -2088,7 +2092,9 @@ listElement.addEventListener("click", async (event) => {
           await submitPosition({ id, position: newValue });
         }
         await loadData();
-        showToast(`${fieldType === "name" ? "Name" : "Position"} updated.`, { type: "success" });
+        showToast(`${fieldType === "name" ? "Name" : "Position"} updated.`, {
+          type: "success",
+        });
       } catch (error) {
         showToast(error?.message || `Failed to update ${fieldType}.`, {
           type: "error",
