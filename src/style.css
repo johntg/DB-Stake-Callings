@@ -200,9 +200,11 @@ body.modal-open {
 }
 
 .unit-text {
-  font-size: 0.8rem;
+  font-size: 1.2rem;
   color: var(--text-subtle);
   font-style: italic;
+  font-weight: 600;
+  color: #850042;
 }
 
 .approval-grid {
