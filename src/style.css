@@ -11,7 +11,8 @@
   --lightContrast: #eddaff;
   --midContrast: #24cb90;
   --darkContrast: #ad0058;
-  --iconClr: #24CB90;
+  --iconClr: #24cb90;
+}
 * {
   box-sizing: border-box;
 }
