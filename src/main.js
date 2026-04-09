@@ -453,6 +453,7 @@ function setReportsPageOpen(isOpen) {
   listElement.classList.toggle("hidden", appState.reportsPageOpen);
   loaderElement.classList.toggle("hidden", appState.reportsPageOpen);
   openModalButton.hidden = appState.reportsPageOpen || !appState.sessionToken;
+  toggleSortButton.hidden = appState.reportsPageOpen || !appState.sessionToken;
 
   reportsPageButton.textContent = appState.reportsPageOpen
     ? "Back to Callings"
@@ -2901,14 +2902,6 @@ reportsListElement.addEventListener("click", async (event) => {
     if (shouldMarkSustained && !isAlreadySustained) {
       await submitApprovalToggle({ id, colIndex: 7, isChecked: true });
       await loadData();
-
-      if (appState.sessionRole.toLowerCase() === "admin") {
-        try {
-          await submitGenerateReport({ reportType: REPORT_TYPES.OPEN_BY_UNIT });
-        } catch {
-          // Non-blocking: sustaining should still succeed even if report refresh fails.
-        }
-      }
 
       setReportDecisionPanelCollapsed(id, true);
       showToast("Sustained threshold reached. Marked as SHC sustained.", {
