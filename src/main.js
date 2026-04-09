@@ -6,9 +6,39 @@ const DEV_API_PROXY_PATH = "/api/apps-script";
 const SESSION_STORAGE_KEY = "stake-callings-session";
 const SESSION_TTL_MS = 3 * 60 * 60 * 1000;
 const PUBLIC_API_ACTIONS = new Set(["authOptions", "login"]);
+const REPORT_TYPES = {
+  OPEN_BY_UNIT: "Approved by SP, Awaiting HC Sustain",
+  ASSIGNMENTS_BY_PERSON: "Assignments by Person",
+};
+const HIGH_COUNCIL_GROUP_LABEL = "High Council";
+const EXCLUDED_PRESIDENT_ALIASES = [
+  "President Pongia",
+  "Pongia",
+  "President Gardiner",
+  "Gardiner",
+  "President Satele",
+  "President Satale",
+  "Satele",
+  "Satale",
+];
 const DEMO_DATA = {
   units: ["1st Ward", "2nd Ward", "YSA Branch"],
   assigners: ["Bishop Smith", "Sister Jones", "Brother Clark"],
+  reports: [
+    {
+      generatedAt: "06/04/2026 10:30",
+      reportType: REPORT_TYPES.OPEN_BY_UNIT,
+      generatedBy: "President Example",
+      summary:
+        "Awaiting HC sustain (2): Jane Example — Relief Society President (1st Ward); John Sample — Ward Clerk (2nd Ward)",
+    },
+    {
+      generatedAt: "06/04/2026 10:35",
+      reportType: REPORT_TYPES.ASSIGNMENTS_BY_PERSON,
+      generatedBy: "President Example",
+      summary: "Bishop Smith: 2 | Sister Jones: 1",
+    },
+  ],
   callings: [
     [
       "Timestamp",
@@ -71,6 +101,7 @@ document.querySelector("#app").innerHTML = `
       <p>Track calls and releases from your spreadsheet.</p>
       <button id="toggle-items-btn" class="header-action-btn" type="button" hidden>Show all current items</button>
       <button id="toggle-sort-btn" class="header-action-btn" type="button" hidden>Show oldest first</button>
+      <button id="reports-page-btn" class="header-action-btn" type="button" hidden>Reports</button>
       <button id="sign-out-btn" class="header-action-btn" type="button" hidden>Sign out</button>
         </header>
 
@@ -83,6 +114,18 @@ document.querySelector("#app").innerHTML = `
 
         <div id="loader">Connecting to Google Sheets...</div>
         <div id="data-list" aria-live="polite"></div>
+
+        <section id="reports-page" class="reports-page hidden" aria-live="polite">
+          <div class="reports-header">
+            <h2>Reports</h2>
+            <p>Admins can generate reports. Assigned users can view them.</p>
+          </div>
+          <div id="report-actions" class="report-actions hidden">
+            <button id="generate-open-by-unit-btn" class="btn btn-primary" type="button">Generate Approved by SP, Awaiting HC Sustain</button>
+            <button id="generate-assignments-by-person-btn" class="btn btn-primary" type="button">Generate Assignments by Person</button>
+          </div>
+          <div id="reports-list" class="reports-list"></div>
+        </section>
 
         <button id="open-modal-btn" class="fab" type="button" aria-label="Add calling">
             +
@@ -172,7 +215,17 @@ const toastElement = document.getElementById("app-toast");
 const busyOverlayElement = document.getElementById("busy-overlay");
 const toggleItemsButton = document.getElementById("toggle-items-btn");
 const toggleSortButton = document.getElementById("toggle-sort-btn");
+const reportsPageButton = document.getElementById("reports-page-btn");
 const signOutButton = document.getElementById("sign-out-btn");
+const reportsPageElement = document.getElementById("reports-page");
+const reportActionsElement = document.getElementById("report-actions");
+const reportsListElement = document.getElementById("reports-list");
+const generateOpenByUnitButton = document.getElementById(
+  "generate-open-by-unit-btn",
+);
+const generateAssignmentsByPersonButton = document.getElementById(
+  "generate-assignments-by-person-btn",
+);
 const authModalElement = document.getElementById("auth-modal");
 const authFormElement = document.getElementById("auth-form");
 const authUserElement = document.getElementById("auth-user");
@@ -262,11 +315,13 @@ const appState = {
   admins: [],
   assigners: [],
   statuses: [],
+  reports: [],
   callings: [],
   authUsers: [],
   sessionToken: "",
   sessionName: "",
   sessionRole: "",
+  reportsPageOpen: false,
   showAllCurrentItems: false,
   sortNewestFirst: true,
   usingDemoData: false,
@@ -356,11 +411,16 @@ function setSession(session = {}) {
   signOutButton.hidden = !appState.sessionToken;
   openModalButton.hidden = false;
   toggleSortButton.hidden = !appState.sessionToken;
+  reportsPageButton.hidden = !appState.sessionToken;
   toggleSortButton.textContent = appState.sortNewestFirst
     ? "Show oldest first"
     : "Show newest first";
   toggleItemsButton.hidden =
     !appState.sessionToken || appState.sessionRole.toLowerCase() !== "assign";
+  reportActionsElement.classList.toggle(
+    "hidden",
+    appState.sessionRole.toLowerCase() !== "admin",
+  );
   toggleItemsButton.textContent = appState.showAllCurrentItems
     ? "Show only my assignments"
     : "Show all current items";
@@ -371,7 +431,20 @@ function setSession(session = {}) {
     );
   } else {
     setHeaderMessage("Track calls and releases from your spreadsheet.");
+    setReportsPageOpen(false);
   }
+}
+
+function setReportsPageOpen(isOpen) {
+  appState.reportsPageOpen = Boolean(isOpen);
+  reportsPageElement.classList.toggle("hidden", !appState.reportsPageOpen);
+  listElement.classList.toggle("hidden", appState.reportsPageOpen);
+  loaderElement.classList.toggle("hidden", appState.reportsPageOpen);
+  openModalButton.hidden = appState.reportsPageOpen || !appState.sessionToken;
+
+  reportsPageButton.textContent = appState.reportsPageOpen
+    ? "Back to Callings"
+    : "Reports";
 }
 
 function persistSessionPreferences() {
@@ -476,6 +549,17 @@ function getVisibleCallingsRows() {
   return [header, ...assignedRows];
 }
 
+function getCallingRowById(id) {
+  const rows = Array.isArray(appState.callings) ? appState.callings : [];
+  for (let index = 1; index < rows.length; index += 1) {
+    if (String(rows[index]?.[0] ?? "") === String(id)) {
+      return rows[index];
+    }
+  }
+
+  return null;
+}
+
 function renderCurrentCallingsView() {
   const role = appState.sessionRole.toLowerCase();
   const emptyMessage =
@@ -486,13 +570,42 @@ function renderCurrentCallingsView() {
   renderCards(getVisibleCallingsRows(), emptyMessage);
 }
 
+function renderReports() {
+  const reports = Array.isArray(appState.reports) ? appState.reports : [];
+  if (reports.length === 0) {
+    reportsListElement.innerHTML =
+      '<div class="card empty-state"><small>No reports yet.</small></div>';
+    return;
+  }
+
+  reportsListElement.innerHTML = reports
+    .map((report) => {
+      const generatedAt = escapeHtml(report?.generatedAt || "Unknown date");
+      const reportType = escapeHtml(report?.reportType || "Report");
+      const generatedBy = escapeHtml(report?.generatedBy || "Unknown user");
+      const summary = escapeHtml(report?.summary || "No summary available.");
+
+      return `
+        <article class="card report-card">
+          <div class="person-name">${reportType}</div>
+          <div class="pos-text">Generated by ${generatedBy}</div>
+          <div class="unit-text">${generatedAt}</div>
+          <p class="report-summary">${summary}</p>
+        </article>
+      `;
+    })
+    .join("");
+}
+
 function applyData(data) {
   appState.units = Array.isArray(data.units) ? data.units : [];
   appState.admins = Array.isArray(data.admins) ? data.admins : [];
   appState.assigners = Array.isArray(data.assigners) ? data.assigners : [];
   appState.statuses = Array.isArray(data.statuses) ? data.statuses : [];
+  appState.reports = Array.isArray(data.reports) ? data.reports : [];
   appState.callings = Array.isArray(data.callings) ? data.callings : [];
   populateUnitOptions(appState.units);
+  renderReports();
   renderCurrentCallingsView();
 }
 
@@ -661,6 +774,7 @@ function renderCards(rows, emptyMessage = "No callings found.") {
       const isShcSustainedComplete = Boolean(row?.[6]);
       const isInterviewComplete = Boolean(row?.[8]);
       const isSettingApartComplete = Boolean(row?.[13]);
+      const hcVoteBadge = getHighCouncilVoteBadge(row?.[11] ?? "");
 
       return `
         <article class="card">
@@ -757,7 +871,10 @@ function renderCards(rows, emptyMessage = "No callings found.") {
           ${
             isCall
               ? `<section class="interview-section completion-pending">
-            <label class="field-label interview-label" for="sus-assignee-${escapeHtml(row?.[0] ?? "")}">Sustaining</label>
+            <label class="field-label interview-label" for="sus-assignee-${escapeHtml(row?.[0] ?? "")}">
+              Sustaining coordination
+              <span class="vote-badge ${hcVoteBadge.isComplete ? "complete" : "pending"}">${escapeHtml(hcVoteBadge.label)}</span>
+            </label>
             <select
               id="sus-assignee-${escapeHtml(row?.[0] ?? "")}"
               class="interviewer-select"
@@ -775,7 +892,7 @@ function renderCards(rows, emptyMessage = "No callings found.") {
               aria-expanded="false"
               aria-controls="sus-units-panel-${escapeHtml(row?.[0] ?? "")}"
             >
-              Choose units
+              Choose High Council votes
             </button>
             <div
               id="sus-units-panel-${escapeHtml(row?.[0] ?? "")}"
@@ -895,16 +1012,107 @@ function parseSelectedUnits(selectedUnitsString) {
     .filter(Boolean);
 }
 
+function isExcludedPresidentName(name) {
+  const normalizedName = normalizeForMatch(name);
+
+  if (!normalizedName) {
+    return false;
+  }
+
+  // Robustly catch variants like "President John Gardiner".
+  if (normalizedName.includes("gardiner")) {
+    return true;
+  }
+
+  return EXCLUDED_PRESIDENT_ALIASES.some((presidentName) => {
+    const normalizedAlias = normalizeForMatch(presidentName);
+    return (
+      normalizedAlias === normalizedName ||
+      normalizedName.includes(normalizedAlias)
+    );
+  });
+}
+
+function getHighCouncilVoterNames() {
+  const seen = new Set();
+  const voters = [];
+
+  const rawNames = Array.isArray(appState.assigners) ? appState.assigners : [];
+  for (const rawName of rawNames) {
+    const cleanedName = String(rawName ?? "").trim();
+    if (!cleanedName || isExcludedPresidentName(cleanedName)) {
+      continue;
+    }
+
+    if (normalizeForMatch(cleanedName) === normalizeForMatch(HIGH_COUNCIL_GROUP_LABEL)) {
+      continue;
+    }
+
+    const key = normalizeForMatch(cleanedName);
+    if (seen.has(key)) {
+      continue;
+    }
+
+    seen.add(key);
+    voters.push(cleanedName);
+  }
+
+  return [HIGH_COUNCIL_GROUP_LABEL, ...voters];
+}
+
+function isSustainedByHighCouncilSelection(selectedUnits) {
+  const selected = Array.isArray(selectedUnits) ? selectedUnits : [];
+  if (selected.includes(HIGH_COUNCIL_GROUP_LABEL)) {
+    return true;
+  }
+
+  const individualVotes = selected.filter(
+    (name) => name && name !== HIGH_COUNCIL_GROUP_LABEL,
+  );
+
+  return individualVotes.length >= 6;
+}
+
 function formatSustainingUnitsSummary(selectedUnitsString) {
   const savedUnits = parseSelectedUnits(selectedUnitsString);
-  return savedUnits.length > 0 ? savedUnits.join(", ") : "No units selected.";
+  if (savedUnits.length === 0) {
+    return "No High Council votes yet.";
+  }
+
+  const individualVotes = savedUnits.filter(
+    (name) => name !== HIGH_COUNCIL_GROUP_LABEL,
+  ).length;
+
+  if (savedUnits.includes(HIGH_COUNCIL_GROUP_LABEL)) {
+    return "Sustained by High Council meeting vote.";
+  }
+
+  return `${savedUnits.join(", ")} (${individualVotes}/6 council votes)`;
+}
+
+function getHighCouncilVoteBadge(selectedUnitsString) {
+  const savedUnits = parseSelectedUnits(selectedUnitsString);
+
+  if (savedUnits.includes(HIGH_COUNCIL_GROUP_LABEL)) {
+    return {
+      label: "HC meeting",
+      isComplete: true,
+    };
+  }
+
+  const individualVotes = savedUnits.filter(
+    (name) => name !== HIGH_COUNCIL_GROUP_LABEL,
+  ).length;
+
+  return {
+    label: `${individualVotes}/6`,
+    isComplete: individualVotes >= 6,
+  };
 }
 
 function renderSustainingUnitButtons(rowId, selectedUnitsString) {
   const savedUnits = parseSelectedUnits(selectedUnitsString);
-  const units = Array.isArray(appState.units)
-    ? appState.units.filter(Boolean)
-    : [];
+  const units = getHighCouncilVoterNames();
 
   return units
     .map((unit) => {
@@ -1434,7 +1642,9 @@ async function submitSustainingAssignee(payload) {
 
 async function submitSustainingUnits(payload) {
   if (!isApiConfigured() || appState.usingDemoData) {
-    throw new Error("Sustaining unit updates are unavailable in demo mode.");
+    throw new Error(
+      "High Council sustaining vote updates are unavailable in demo mode.",
+    );
   }
 
   const formData = createActionFormData({
@@ -1456,7 +1666,7 @@ async function submitSustainingUnits(payload) {
 
     const result = await response.json();
     if (result?.success !== true) {
-      throw new Error(result?.error || "Unable to update sustaining units.");
+      throw new Error(result?.error || "Unable to update High Council votes.");
     }
   } catch (error) {
     const isFetchFailure =
@@ -1477,7 +1687,7 @@ async function submitSustainingUnits(payload) {
     if (fallbackResult?.success !== true) {
       throw new Error(
         fallbackResult?.error ||
-          "Compatibility sustaining units update failed.",
+          "Compatibility High Council vote update failed.",
       );
     }
   }
@@ -1734,6 +1944,81 @@ async function submitArchiveRow(payload) {
   }
 }
 
+async function submitGenerateReport(payload) {
+  if (!isApiConfigured() || appState.usingDemoData) {
+    throw new Error("Report generation is unavailable in demo mode.");
+  }
+
+  const formData = createActionFormData({
+    action: "generateReport",
+    reportType: payload.reportType,
+  });
+
+  try {
+    const response = await fetch(getApiUrl(), {
+      method: "POST",
+      redirect: "follow",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Report generation failed (${response.status})`);
+    }
+
+    const result = await response.json();
+    if (result?.success !== true) {
+      const serverMessage = String(result?.error || "").toLowerCase();
+      if (serverMessage.includes('unknown post action: "generatereport"')) {
+        const fallbackResult = await requestViaJsonp("generateReport", {
+          reportType: payload.reportType,
+        });
+
+        if (fallbackResult?.success !== true) {
+          throw new Error(
+            fallbackResult?.error || "Compatibility report generation failed.",
+          );
+        }
+
+        appState.reports = Array.isArray(fallbackResult.reports)
+          ? fallbackResult.reports
+          : [];
+        renderReports();
+        return;
+      }
+
+      throw new Error(result?.error || "Unable to generate report.");
+    }
+
+    appState.reports = Array.isArray(result.reports) ? result.reports : [];
+    renderReports();
+  } catch (error) {
+    const isFetchFailure =
+      error instanceof TypeError ||
+      String(error?.message || "")
+        .toLowerCase()
+        .includes("failed to fetch");
+
+    if (!isFetchFailure) {
+      throw error;
+    }
+
+    const fallbackResult = await requestViaJsonp("generateReport", {
+      reportType: payload.reportType,
+    });
+
+    if (fallbackResult?.success !== true) {
+      throw new Error(
+        fallbackResult?.error || "Compatibility report generation failed.",
+      );
+    }
+
+    appState.reports = Array.isArray(fallbackResult.reports)
+      ? fallbackResult.reports
+      : [];
+    renderReports();
+  }
+}
+
 authFormElement.addEventListener("submit", async (event) => {
   event.preventDefault();
 
@@ -1818,10 +2103,19 @@ openModalButton.addEventListener("click", () => {
 
   setModalOpen(true);
 });
+reportsPageButton.addEventListener("click", () => {
+  if (!appState.sessionToken) {
+    setAuthModalOpen(true);
+    return;
+  }
+
+  setReportsPageOpen(!appState.reportsPageOpen);
+});
 closeModalButton.addEventListener("click", () => setModalOpen(false));
 cancelButton.addEventListener("click", () => setModalOpen(false));
 signOutButton.addEventListener("click", () => {
   clearSession();
+  setReportsPageOpen(false);
   listElement.innerHTML = "";
   setStatusMessage("Signed out. Please sign in to continue.");
   setAuthModalOpen(true);
@@ -1843,6 +2137,48 @@ toggleSortButton.addEventListener("click", () => {
     : "Show newest first";
   persistSessionPreferences();
   renderCurrentCallingsView();
+});
+
+generateOpenByUnitButton.addEventListener("click", async () => {
+  if (appState.sessionRole.toLowerCase() !== "admin") {
+    showToast("Only admins can generate reports.", { type: "error" });
+    return;
+  }
+
+  generateOpenByUnitButton.disabled = true;
+  try {
+    await submitGenerateReport({ reportType: REPORT_TYPES.OPEN_BY_UNIT });
+    showToast("Approved-by-SP awaiting-HC report generated.", {
+      type: "success",
+    });
+  } catch (error) {
+    showToast(error?.message || "Failed to generate report.", {
+      type: "error",
+    });
+  } finally {
+    generateOpenByUnitButton.disabled = false;
+  }
+});
+
+generateAssignmentsByPersonButton.addEventListener("click", async () => {
+  if (appState.sessionRole.toLowerCase() !== "admin") {
+    showToast("Only admins can generate reports.", { type: "error" });
+    return;
+  }
+
+  generateAssignmentsByPersonButton.disabled = true;
+  try {
+    await submitGenerateReport({
+      reportType: REPORT_TYPES.ASSIGNMENTS_BY_PERSON,
+    });
+    showToast("Assignments by Person report generated.", { type: "success" });
+  } catch (error) {
+    showToast(error?.message || "Failed to generate report.", {
+      type: "error",
+    });
+  } finally {
+    generateAssignmentsByPersonButton.disabled = false;
+  }
 });
 
 modalElement.addEventListener("click", (event) => {
@@ -2146,8 +2482,8 @@ listElement.addEventListener("click", async (event) => {
     const isHidden = panel.classList.toggle("hidden");
     sustainingUnitsToggle.setAttribute("aria-expanded", String(!isHidden));
     sustainingUnitsToggle.textContent = isHidden
-      ? "Choose units"
-      : "Hide units";
+      ? "Choose High Council votes"
+      : "Hide High Council votes";
     return;
   }
 
@@ -2159,9 +2495,12 @@ listElement.addEventListener("click", async (event) => {
     const unit = sustainingUnitChip.dataset.unit?.trim();
 
     if (!id || !unit) {
-      showToast("Unable to update sustaining units: missing row identifier.", {
-        type: "error",
-      });
+      showToast(
+        "Unable to update High Council votes: missing row identifier.",
+        {
+          type: "error",
+        },
+      );
       return;
     }
 
@@ -2188,9 +2527,24 @@ listElement.addEventListener("click", async (event) => {
     try {
       await submitSustainingUnits({ id, units: nextUnits.join(", ") });
       await loadData();
-      showToast("Sustaining units updated.", { type: "success" });
+
+      const updatedRow = getCallingRowById(id);
+      const updatedVotes = parseSelectedUnits(updatedRow?.[11] ?? "");
+      const shouldMarkSustained =
+        isSustainedByHighCouncilSelection(updatedVotes);
+      const isAlreadySustained = Boolean(updatedRow?.[6]);
+
+      if (shouldMarkSustained && !isAlreadySustained) {
+        await submitApprovalToggle({ id, colIndex: 7, isChecked: true });
+        await loadData();
+        showToast("Sustained threshold reached. Marked as SHC sustained.", {
+          type: "success",
+        });
+      } else {
+        showToast("High Council votes updated.", { type: "success" });
+      }
     } catch (error) {
-      showToast(error?.message || "Failed to update sustaining units.", {
+      showToast(error?.message || "Failed to update High Council votes.", {
         type: "error",
       });
     } finally {
