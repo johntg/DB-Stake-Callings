@@ -1044,7 +1044,10 @@ function getHighCouncilVoterNames() {
       continue;
     }
 
-    if (normalizeForMatch(cleanedName) === normalizeForMatch(HIGH_COUNCIL_GROUP_LABEL)) {
+    if (
+      normalizeForMatch(cleanedName) ===
+      normalizeForMatch(HIGH_COUNCIL_GROUP_LABEL)
+    ) {
       continue;
     }
 
