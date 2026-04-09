@@ -350,9 +350,7 @@ function generateReport(reportType, generatedBy) {
       "dd/MM/yyyy HH:mm",
     );
 
-    if (cleanedReportType === CONFIG.REPORT_TYPES.OPEN_BY_UNIT) {
-      deleteReportsByType_(reportsSheet, cleanedReportType);
-    }
+    deleteReportsByType_(reportsSheet, cleanedReportType);
 
     reportsSheet.appendRow([
       generatedAt,
@@ -554,12 +552,12 @@ function buildAssignmentsByPersonReport_(callings) {
     byUnit[unitKey].people.sort();
   });
 
-  var sections = [];
+  var allPeople = [];
 
   if (byUnit[stakeUnitKey]) {
-    sections.push(
-      buildSustainingSection_("Stake", byUnit[stakeUnitKey].people),
-    );
+    byUnit[stakeUnitKey].people.forEach(function (person) {
+      allPeople.push(person);
+    });
   }
 
   unitKeys
@@ -570,15 +568,19 @@ function buildAssignmentsByPersonReport_(callings) {
       return byUnit[a].unitName.localeCompare(byUnit[b].unitName);
     })
     .forEach(function (unitKey) {
-      sections.push(
-        buildSustainingSection_(
-          byUnit[unitKey].unitName,
-          byUnit[unitKey].people,
-        ),
-      );
+      byUnit[unitKey].people.forEach(function (person) {
+        allPeople.push(person);
+      });
     });
 
-  return sections.join("\n\n");
+  var intro = "The following have been called to positions in the Stake:";
+  var lines = allPeople.map(function (entry) {
+    return "- " + entry;
+  });
+  var closing =
+    "It is proposed they be sustained. All in favour indicate by raising the right hand. Any opposed by a like sign.";
+
+  return [intro].concat(lines).concat([closing]).join("\n");
 }
 
 function buildSustainingSection_(unitName, people) {

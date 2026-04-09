@@ -896,7 +896,6 @@ function renderCards(rows, emptyMessage = "No callings found.") {
       const isShcSustainedComplete = Boolean(row?.[6]);
       const isInterviewComplete = Boolean(row?.[8]);
       const isSettingApartComplete = Boolean(row?.[13]);
-      const hcVoteBadge = getHighCouncilVoteBadge(row?.[11] ?? "");
 
       return `
         <article class="card">
@@ -995,7 +994,6 @@ function renderCards(rows, emptyMessage = "No callings found.") {
               ? `<section class="interview-section completion-pending">
             <label class="field-label interview-label" for="sus-assignee-${escapeHtml(row?.[0] ?? "")}">
               Sustaining coordination
-              <span class="vote-badge ${hcVoteBadge.isComplete ? "complete" : "pending"}">${escapeHtml(hcVoteBadge.label)}</span>
             </label>
             <select
               id="sus-assignee-${escapeHtml(row?.[0] ?? "")}"
@@ -1014,7 +1012,7 @@ function renderCards(rows, emptyMessage = "No callings found.") {
               aria-expanded="false"
               aria-controls="sus-units-panel-${escapeHtml(row?.[0] ?? "")}"
             >
-              Choose High Council votes
+              Choose sustaining units
             </button>
             <div
               id="sus-units-panel-${escapeHtml(row?.[0] ?? "")}"
@@ -1201,43 +1199,17 @@ function isSustainedByHighCouncilSelection(selectedUnits) {
 function formatSustainingUnitsSummary(selectedUnitsString) {
   const savedUnits = parseSelectedUnits(selectedUnitsString);
   if (savedUnits.length === 0) {
-    return "No High Council votes yet.";
+    return "No sustaining units selected.";
   }
 
-  const individualVotes = savedUnits.filter(
-    (name) => name !== HIGH_COUNCIL_GROUP_LABEL,
-  ).length;
-
-  if (savedUnits.includes(HIGH_COUNCIL_GROUP_LABEL)) {
-    return "Sustained by High Council meeting vote.";
-  }
-
-  return `${savedUnits.join(", ")} (${individualVotes}/${HIGH_COUNCIL_VOTE_DISPLAY_TOTAL} council votes)`;
-}
-
-function getHighCouncilVoteBadge(selectedUnitsString) {
-  const savedUnits = parseSelectedUnits(selectedUnitsString);
-
-  if (savedUnits.includes(HIGH_COUNCIL_GROUP_LABEL)) {
-    return {
-      label: "HC meeting",
-      isComplete: true,
-    };
-  }
-
-  const individualVotes = savedUnits.filter(
-    (name) => name !== HIGH_COUNCIL_GROUP_LABEL,
-  ).length;
-
-  return {
-    label: `${individualVotes}/${HIGH_COUNCIL_VOTE_DISPLAY_TOTAL}`,
-    isComplete: individualVotes >= HIGH_COUNCIL_SUSTAIN_THRESHOLD,
-  };
+  return savedUnits.join(", ");
 }
 
 function renderSustainingUnitButtons(rowId, selectedUnitsString) {
   const savedUnits = parseSelectedUnits(selectedUnitsString);
-  const units = getHighCouncilVoterNames();
+  const units = Array.isArray(appState.units)
+    ? appState.units.filter(Boolean)
+    : [];
 
   return units
     .map((unit) => {
@@ -2607,8 +2579,8 @@ listElement.addEventListener("click", async (event) => {
     const isHidden = panel.classList.toggle("hidden");
     sustainingUnitsToggle.setAttribute("aria-expanded", String(!isHidden));
     sustainingUnitsToggle.textContent = isHidden
-      ? "Choose High Council votes"
-      : "Hide High Council votes";
+      ? "Choose sustaining units"
+      : "Hide sustaining units";
     return;
   }
 
@@ -2620,12 +2592,9 @@ listElement.addEventListener("click", async (event) => {
     const unit = sustainingUnitChip.dataset.unit?.trim();
 
     if (!id || !unit) {
-      showToast(
-        "Unable to update High Council votes: missing row identifier.",
-        {
-          type: "error",
-        },
-      );
+      showToast("Unable to update sustaining units: missing row identifier.", {
+        type: "error",
+      });
       return;
     }
 
@@ -2655,21 +2624,9 @@ listElement.addEventListener("click", async (event) => {
 
       const updatedRow = getCallingRowById(id);
       const updatedVotes = parseSelectedUnits(updatedRow?.[11] ?? "");
-      const shouldMarkSustained =
-        isSustainedByHighCouncilSelection(updatedVotes);
-      const isAlreadySustained = Boolean(updatedRow?.[6]);
-
-      if (shouldMarkSustained && !isAlreadySustained) {
-        await submitApprovalToggle({ id, colIndex: 7, isChecked: true });
-        await loadData();
-        showToast("Sustained threshold reached. Marked as SHC sustained.", {
-          type: "success",
-        });
-      } else {
-        showToast("High Council votes updated.", { type: "success" });
-      }
+      showToast("Sustaining units updated.", { type: "success" });
     } catch (error) {
-      showToast(error?.message || "Failed to update High Council votes.", {
+      showToast(error?.message || "Failed to update sustaining units.", {
         type: "error",
       });
     } finally {
