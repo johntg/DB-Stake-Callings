@@ -33,7 +33,7 @@ jobs:
       - name: Build site
         run: npm run build
         env:
-          VITE_BASE_PATH: /stake-callings/
+          VITE_BASE_PATH: /DB-Stake-Callings/
           VITE_APPS_SCRIPT_URL: ${{ secrets.VITE_APPS_SCRIPT_URL }}
 
       - name: Setup Pages
