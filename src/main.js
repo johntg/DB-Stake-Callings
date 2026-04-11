@@ -156,6 +156,28 @@ function renderCards() {
           <div style="display: ${isExpanded ? "block" : "none"}; margin-top: 20px; padding-top: 20px; border-top: 1px dashed #ccc;">
              <p style="font-size: 0.8rem; color: #888; margin-bottom: 10px;">DETAILED STEPS:</p>
              <div style="background: #fdfdfd; padding: 15px; border-radius: 10px; border: 1px solid #eee;">
+                <div style="display: grid; gap: 12px; margin-bottom: 14px;">
+                  <div>
+                    <label style="display: block; font-size: 0.75rem; color: #666; font-weight: bold; margin-bottom: 6px; text-transform: uppercase;">Interview assigned to</label>
+                    <select
+                      onchange="window.updateAssignment('${row.id}', 'interview_by', this.value)"
+                      style="width: 100%; padding: 10px 12px; border: 1px solid #d7dbe3; border-radius: 8px; background: #fff; color: #333; font-size: 0.95rem;"
+                    >
+                      <option value="">Select interviewer...</option>
+                      ${appState.assignableNames
+                        .map(
+                          (name) =>
+                            `<option value="${name}" ${row.interview_by === name ? "selected" : ""}>${name}</option>`,
+                        )
+                        .join("")}
+                    </select>
+                  </div>
+
+                  <label style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; background: ${row.interviewed ? "#dff5e8" : "#f5f7fa"}; color: #333; font-weight: 600; cursor: pointer;">
+                    <input type="checkbox" ${row.interviewed ? "checked" : ""} onchange="window.updateField('${row.id}', 'interviewed', this.checked)">
+                    <span>Interview completed</span>
+                  </label>
+                </div>
                 <p style="margin: 0; color: #444;">Status: <strong>${row.status || "In Progress"}</strong></p>
              </div>
           </div>
@@ -173,9 +195,34 @@ window.toggleDetails = (id) => {
   renderCards();
 };
 
+window.updateAssignment = async (id, field, value) => {
+  const { error } = await supabase
+    .from("callings")
+    .update({ [field]: value || null })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Assignment update error:", error);
+    alert(`Failed to update assignment: ${error.message}`);
+    return;
+  }
+
+  const item = appState.callings.find((c) => c.id === id);
+  if (item) {
+    item[field] = value || null;
+  }
+
+  renderCards();
+};
+
 window.updateField = async (id, field, value) => {
   // Prepare the update object
   const updateData = { [field]: value };
+
+  // For interview completion, unchecked should be null in DB (not false)
+  if (field === "interviewed" && value === false) {
+    updateData[field] = null;
+  }
 
   // Add timestamp when checkbox is checked
   if (value === true) {
