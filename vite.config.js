@@ -14,7 +14,11 @@ function normalizeBasePath(basePath) {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const apiUrl = env.VITE_APPS_SCRIPT_URL || "";
-  const base = normalizeBasePath(env.VITE_BASE_PATH || "/");
+  const base = normalizeBasePath(
+    mode === "development"
+      ? env.VITE_DEV_BASE_PATH || "/"
+      : env.VITE_BASE_PATH || "/",
+  );
 
   let server;
   try {

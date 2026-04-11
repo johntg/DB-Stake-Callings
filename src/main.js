@@ -8,6 +8,20 @@ const supabaseUrl = "https://orhcmllshkgqdektxshs.supabase.co";
 const supabaseKey = "sb_publishable_1dTR4wmkKA4KPLqMa-tYaw_0GbMx41P";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+if (import.meta.env.DEV && typeof window !== "undefined") {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => registration.unregister());
+    });
+  }
+
+  if ("caches" in window) {
+    caches.keys().then((keys) => {
+      keys.forEach((key) => caches.delete(key));
+    });
+  }
+}
+
 // 3. APP STATE (Preserving your Role & Member logic)
 const appState = {
   callings: [],

@@ -41,7 +41,7 @@ body {
   background: var(--bg-muted);
   background-image: url("data:image/svg+xml,%3C%3Fxml version='1.0' encoding='UTF-8'%3F%3E%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3Cstyle%3E.cls-1,.cls-2,.cls-3,.cls-4,.cls-5%7Bfill:%23027da5;%7D.cls-6%7Bfill:%23fff;%7D.cls-2%7Bopacity:.6;%7D.cls-3%7Bopacity:.7;%7D.cls-4%7Bopacity:.9;%7D.cls-5%7Bopacity:.8;%7D%3C/style%3E%3C/defs%3E%3Cg id='Layer_5'%3E%3Crect class='cls-6' width='512' height='512'/%3E%3C/g%3E%3Cg id='Layer_1'%3E%3Crect class='cls-1' x='-.33' width='512' height='512'/%3E%3C/g%3E%3Cg id='Layer_3'%3E%3Cpolyline class='cls-1' points='511.67 512 511.67 0 424.33 0 -.33 512'/%3E%3Cpolyline class='cls-1' points='511.67 512 511.67 0 424.33 0 -.33 512'/%3E%3Cpolyline class='cls-6' points='511.67 512 511.67 0 424.33 0 -.33 512'/%3E%3Cpolyline class='cls-4' points='511.67 512 511.67 0 424.33 0 -.33 512'/%3E%3C/g%3E%3Cg id='Layer_4'%3E%3Cpolygon class='cls-6' points='0 512 511.67 112.56 511.67 512 0 512'/%3E%3Cpolygon class='cls-5' points='0 512 511.67 112.56 511.67 512 0 512'/%3E%3C/g%3E%3Cg id='Layer_6'%3E%3Cpolygon class='cls-6' points='-.33 512 511.67 289.22 511.67 512 -.33 512'/%3E%3Cpolyline class='cls-3' points='511.67 512 -.33 512 511.67 289.22'/%3E%3C/g%3E%3Cg id='Layer_7'%3E%3Cpolygon class='cls-6' points='-.33 512 511.67 393.67 512 512 -.33 512'/%3E%3Cpolyline class='cls-2' points='512 512 -.33 512 511.67 393.67'/%3E%3C/g%3E%3C/svg%3E");
   background-size: cover;
-  max-width: 100%;
+  /* max-width: 100%; */
 }
 
 body.modal-open {
@@ -110,6 +110,8 @@ body.modal-open {
   margin: 0 auto;
   padding: 20px;
   display: flex;
+  justify-content: center;
+  align-items: center;
   flex-direction: column;
   gap: 25px; /* This creates the space between cards seen in your screenshot */
 }
@@ -274,6 +276,7 @@ body.modal-open {
 
 /* Card Container Adjustments */
 .card {
+  width: 95vw;
   max-width: 960px; /* Limit width  */
   margin: 20px auto; /* Center on page */
   background-color: #fff !important; /* Force white background */
