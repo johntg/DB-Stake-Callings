@@ -85,16 +85,28 @@ window.login = async function (e) {
     return;
   }
 
-  // 3. Logic check based on your CSV [cite: 1, 2, 3]
-  const requiredType = person.shared_password_type; // 'admin' or 'stake'
-  const correctPassword = requiredType === "admin" ? ADMIN_PW : STAKE_PW;
+  // 3. Resolve required password type robustly.
+  // Prefer explicit shared_password_type, but fall back to role when needed.
+  const sharedPasswordType = String(person.shared_password_type ?? "")
+    .toLowerCase()
+    .trim();
+  const roleType = String(person.role ?? "")
+    .toLowerCase()
+    .trim();
+
+  const isAdminType =
+    sharedPasswordType.includes("admin") ||
+    (!sharedPasswordType && roleType.includes("admin"));
+
+  const requiredType = isAdminType ? "admin" : "stake";
+  const correctPassword = isAdminType ? ADMIN_PW : STAKE_PW;
 
   // DEBUG LOG - Open your console (F12) to see this!
   console.log(
-    `Logging in as: ${selectedName} | Expects: ${requiredType} password`,
+    `[Stake Callings] Logging in as: ${selectedName} | role=${roleType || "(none)"} | shared_password_type=${sharedPasswordType || "(none)"} | expects=${requiredType}`,
   );
 
-  if (enteredPassword === correctPassword) {
+  if (enteredPassword.trim() === correctPassword) {
     localStorage.setItem("isLoggedIn", "true");
     localStorage.setItem("currentUser", person.name);
     localStorage.setItem("userRole", person.role); // Sets 'admin', 'assign', or 'viewer'

@@ -394,9 +394,11 @@ body.modal-open {
 }
 
 .approval-item input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   margin: 0;
+  cursor: pointer;
+  accent-color: var(--stake-blue);
 }
 
 .approval-date {
@@ -1018,6 +1020,30 @@ select {
 }
 
 .login-card label input[type="checkbox"] {
-  width: auto;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
   cursor: pointer;
+  accent-color: var(--stake-blue);
+}
+
+/* Larger mobile-friendly checkboxes throughout app cards */
+.card input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  min-height: 22px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--stake-blue);
+}
+
+@media (max-width: 640px) {
+  .card input[type="checkbox"],
+  .login-card label input[type="checkbox"] {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    min-height: 26px;
+  }
 }
