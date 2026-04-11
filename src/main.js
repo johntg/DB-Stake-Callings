@@ -98,12 +98,7 @@ function normalizeStatusOptions(rows) {
     .map((row) => {
       if (!row || typeof row !== "object") return "";
       return (
-        row.status ??
-        row.name ??
-        row.label ??
-        row.value ??
-        row.option ??
-        ""
+        row.status ?? row.name ?? row.label ?? row.value ?? row.option ?? ""
       );
     })
     .map((value) => String(value).trim())
