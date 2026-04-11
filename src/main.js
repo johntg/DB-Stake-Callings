@@ -25,17 +25,12 @@ const appState = {
     "Stake",
   ],
   expandedGridId: null,
+  expandedSustainingIds: new Set(),
 };
 
 // 4. CORE LOGIC
 async function startApp() {
   const app = document.getElementById("app");
-
-  // Set background image
-  document.body.style.background = "var(--bg-muted)";
-  document.body.style.backgroundImage =
-    "url('data:image/svg+xml,%3C%3Fxml version=\'1.0\' encoding=\'UTF-8\'%3F%3E%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 512 512\'%3E%3Cdefs%3E%3Cstyle%3E.cls-1,.cls-2,.cls-3,.cls-4,.cls-5%7Bfill:%23027da5;%7D.cls-6%7Bfill:%23fff;%7D.cls-2%7Bopacity:.6;%7D.cls-3%7Bopacity:.7;%7D.cls-4%7Bopacity:.9;%7D.cls-5%7Bopacity:.8;%7D%3C/style%3E%3C/defs%3E%3Cg id=\'Layer_5\'%3E%3Crect class=\'cls-6\' width=\'512\' height=\'512\'/%3E%3C/g%3E%3Cg id=\'Layer_1\'%3E%3Crect class=\'cls-1\' x=\'-.33\' width=\'512\' height=\'512\'/%3E%3C/g%3E%3Cg id=\'Layer_3\'%3E%3Cpolyline class=\'cls-1\' points=\'511.67 512 511.67 0 424.33 0 -.33 512\'/%3E%3Cpolyline class=\'cls-1\' points=\'511.67 512 511.67 0 424.33 0 -.33 512\'/%3E%3Cpolyline class=\'cls-6\' points=\'511.67 512 511.67 0 424.33 0 -.33 512\'/%3E%3Cpolyline class=\'cls-4\' points=\'511.67 512 511.67 0 424.33 0 -.33 512\'/%3E%3C/g%3E%3Cg id=\'Layer_4\'%3E%3Cpolygon class=\'cls-6\' points=\'0 512 511.67 112.56 511.67 512 0 512\'/%3E%3Cpolygon class=\'cls-5\' points=\'0 512 511.67 112.56 511.67 512 0 512\'/%3E%3C/g%3E%3Cg id=\'Layer_6\'%3E%3Cpolygon class=\'cls-6\' points=\'-.33 512 511.67 289.22 511.67 512 -.33 512\'/%3E%3Cpolyline class=\'cls-3\' points=\'511.67 512 -.33 512 511.67 289.22\'/%3E%3C/g%3E%3Cg id=\'Layer_7\'%3E%3Cpolygon class=\'cls-6\' points=\'-.33 512 511.67 393.67 512 512 -.33 512\'/%3E%3Cpolyline class=\'cls-2\' points=\'512 512 -.33 512 511.67 393.67\'/%3E%3C/g%3E%3C/svg%3E')";
-  document.body.style.backgroundSize = "cover";
 
   // Fetch members from database
   const { data: members, error } = await supabase.from("members").select("*");
@@ -183,7 +178,44 @@ function renderCards() {
                     <span>Reminder: verify previous release</span>
                   </label>
                 </div>
-                <p style="margin: 0; color: #444;">Status: <strong>${row.status || "In Progress"}</strong></p>
+
+                <div style="margin-top: 14px; padding-top: 14px; border-top: 1px dashed #e0e0e0;">
+                  <button onclick="window.toggleSustainingUnits('${row.id}')" style="width: 100%; padding: 10px; background: #e3f2fd; border: 1px solid #90caf9; border-radius: 8px; font-weight: 600; color: #1976d2; cursor: pointer; font-size: 0.9rem;">
+                    ${appState.expandedSustainingIds.has(row.id) ? "▲ Hide" : "▼ Show"} Sustaining Units
+                  </button>
+
+                  ${
+                    appState.expandedSustainingIds.has(row.id)
+                      ? `
+                    <div style="margin-top: 12px; padding: 12px; background: #f5f5f5; border-radius: 8px;">
+                      <p style="font-size: 0.75rem; color: #666; font-weight: bold; margin: 0 0 10px 0; text-transform: uppercase;">Units to sustain</p>
+                      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                        ${appState.units
+                          .map((unit) => {
+                            const selectedUnits = Array.isArray(
+                              row.units_sustained,
+                            )
+                              ? row.units_sustained
+                              : [];
+                            const isSelected = selectedUnits.includes(unit);
+                            return `
+                            <button
+                              onclick="window.updateSustainedUnits('${row.id}', '${unit}')"
+                              style="padding: 8px 12px; border-radius: 20px; border: 1px solid #ccc; background: ${isSelected ? "#4CAF50" : "#fff"}; color: ${isSelected ? "#fff" : "#333"}; font-weight: 600; font-size: 0.85rem; cursor: pointer; transition: all 0.2s;"
+                            >
+                              ${unit}
+                            </button>
+                          `;
+                          })
+                          .join("")}
+                      </div>
+                    </div>
+                  `
+                      : ""
+                  }
+                </div>
+
+                <p style="margin: 14px 0 0 0; color: #444;">Status: <strong>${row.status || "In Progress"}</strong></p>
              </div>
           </div>
         </div>
@@ -198,6 +230,48 @@ window.toggleDetails = (id) => {
   // If the clicked card is already open, close it (null). Otherwise, open it.
   appState.expandedGridId = appState.expandedGridId === id ? null : id;
   renderCards();
+};
+
+window.toggleSustainingUnits = (id) => {
+  if (appState.expandedSustainingIds.has(id)) {
+    appState.expandedSustainingIds.delete(id);
+  } else {
+    appState.expandedSustainingIds.add(id);
+  }
+  renderCards();
+};
+
+window.updateSustainedUnits = async (id, unitName) => {
+  const item = appState.callings.find((c) => c.id === id);
+  if (!item) return;
+
+  let sustaining = Array.isArray(item.units_sustained)
+    ? [...item.units_sustained]
+    : [];
+
+  // Toggle the unit
+  if (sustaining.includes(unitName)) {
+    sustaining = sustaining.filter((u) => u !== unitName);
+  } else {
+    sustaining.push(unitName);
+  }
+
+  // Update local state
+  item.units_sustained = sustaining;
+
+  // Update database
+  const { error } = await supabase
+    .from("callings")
+    .update({ units_sustained: sustaining })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error updating sustaining units:", error);
+    alert(`Failed to update sustaining units: ${error.message}`);
+  } else {
+    console.log("Sustaining units updated:", sustaining);
+    renderCards();
+  }
 };
 
 window.updateAssignment = async (id, field, value) => {
@@ -270,14 +344,21 @@ window.updateField = async (id, field, value) => {
 function renderLogin() {
   document.getElementById("app").innerHTML = `
     <div class="login-container">
-      <div class="card login-card">
+      <div class="login-card">
         <h2>Stake Sign In</h2>
         <form onsubmit="window.login(event)">
           <select name="authName" required>
             <option value="">Select Name...</option>
             ${appState.members.map((m) => `<option value="${m.name}">${m.name}</option>`).join("")}
           </select>
-          <input type="password" name="authPassword" placeholder="Password" required>
+          <input id="pw-input" type="password" name="authPassword" placeholder="Password" required>
+          <label>
+            <input
+              type="checkbox"
+              onchange="document.getElementById('pw-input').type = this.checked ? 'text' : 'password'"
+            >
+            Show password
+          </label>
           <button type="submit">Login</button>
         </form>
       </div>

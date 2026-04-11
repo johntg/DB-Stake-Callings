@@ -955,13 +955,16 @@ select {
 }
 
 .login-card {
-  background: #000;
+  background: #000 !important;
+  color: #fff;
   padding: 40px;
   border-radius: 16px;
   width: 100%;
   max-width: 400px;
+  margin: 0 auto;
   border: 1px solid #333;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  overflow: visible;
 }
 
 .login-card h2 {
