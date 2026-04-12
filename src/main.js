@@ -424,6 +424,8 @@ function renderReportsPage() {
 }
 
 function renderCurrentPage() {
+  syncFabVisibility();
+
   if (appState.currentPage === "reports") {
     renderReportsPage();
     return;
@@ -1005,22 +1007,50 @@ function renderLogin() {
       </div>
     </div>
   `;
+
+  syncFabVisibility();
+}
+
+function syncFabVisibility() {
+  const fab = document.getElementById("add-calling-fab");
+  if (!fab) return;
+
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const shouldShow = isLoggedIn && appState.currentPage === "callings";
+  fab.style.display = shouldShow ? "flex" : "none";
 }
 
 function ensureCreateCallingUi() {
   const app = document.getElementById("app");
   if (!app) return;
 
-  if (!document.getElementById("add-calling-fab")) {
-    const fab = document.createElement("button");
+  let fab = document.getElementById("add-calling-fab");
+  if (!fab) {
+    fab = document.createElement("button");
     fab.id = "add-calling-fab";
     fab.className = "fab";
     fab.type = "button";
     fab.setAttribute("aria-label", "Add new calling or release");
     fab.textContent = "+";
     fab.onclick = () => window.openCreateCallingModal();
-    app.appendChild(fab);
   }
+
+  // Mount FAB at body-level so card/list containers cannot clip or hide it.
+  if (fab.parentElement !== document.body) {
+    document.body.appendChild(fab);
+  }
+
+  // Inline safety styles to guarantee visibility even if future CSS overrides occur.
+  Object.assign(fab.style, {
+    position: "fixed",
+    right: "20px",
+    bottom: "20px",
+    width: "60px",
+    height: "60px",
+    zIndex: "1500",
+    alignItems: "center",
+    justifyContent: "center",
+  });
 
   if (!document.getElementById("create-calling-modal")) {
     const modal = document.createElement("div");
@@ -1070,6 +1100,8 @@ function ensureCreateCallingUi() {
 
     app.appendChild(modal);
   }
+
+  syncFabVisibility();
 }
 
 window.openCreateCallingModal = () => {
