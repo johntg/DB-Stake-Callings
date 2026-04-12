@@ -397,9 +397,8 @@ function buildSustainSetApartReleaseReport(rows) {
   const toSustain = rows.filter(
     (row) =>
       String(row.type || "").toUpperCase() !== "RELEASE" &&
-      String(row.status || "")
-        .toLowerCase()
-        .trim() !== "archived" &&
+      String(row.status || "").trim() === "In Progress" &&
+      isCompletedValue(row.interviewed) &&
       (isCompletedValue(row.sp_approved) || isCompletedValue(row.hc_sustained)),
   );
 
@@ -504,6 +503,13 @@ function renderReportsPage() {
     ? `<pre class="report-summary">${escapeHtml(appState.reportOutput)}</pre>`
     : `<p class="report-summary">Choose a report type and click Generate Report.</p>`;
 
+  const actionButtons = appState.reportOutput
+    ? `
+      <button class="btn btn-secondary" onclick="window.copyReportToClipboard()">📋 Copy Report</button>
+      <button class="btn btn-secondary" onclick="window.printReport()">🖨️ Print Report</button>
+    `
+    : "";
+
   reportsPage.innerHTML = `
     <section class="reports-header">
       <h2>Reports</h2>
@@ -524,6 +530,7 @@ function renderReportsPage() {
 
     <article class="card report-card">
       ${reportValue}
+      ${actionButtons}
     </article>
   `;
 }
@@ -1154,6 +1161,53 @@ window.selectReportType = (value) => {
 window.generateCurrentReport = () => {
   appState.reportOutput = generateReport(appState.currentReportType);
   renderReportsPage();
+};
+
+window.copyReportToClipboard = async () => {
+  if (!appState.reportOutput) {
+    alert("No report to copy.");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(appState.reportOutput);
+    alert("Report copied to clipboard!");
+  } catch (err) {
+    console.error("Failed to copy report:", err);
+    alert("Failed to copy report to clipboard. Please try again.");
+  }
+};
+
+window.printReport = () => {
+  if (!appState.reportOutput) {
+    alert("No report to print.");
+    return;
+  }
+
+  const printWindow = window.open("", "", "width=800,height=600");
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Report</title>
+        <style>
+          body {
+            font-family: monospace;
+            padding: 20px;
+            line-height: 1.5;
+          }
+          pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+          }
+        </style>
+      </head>
+      <body>
+        <pre>${escapeHtml(appState.reportOutput)}</pre>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.print();
 };
 
 window.resetCacheAndReload = async () => {
