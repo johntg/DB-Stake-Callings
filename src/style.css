@@ -950,6 +950,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -962,6 +963,7 @@ select {
 
 .main-header button {
   padding: 10px 20px;
+  max-width: 100%;
   border-radius: 8px;
   border: none;
   background: #1a1a1a;

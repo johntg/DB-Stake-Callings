@@ -984,6 +984,32 @@ window.generateCurrentReport = () => {
   renderReportsPage();
 };
 
+window.resetCacheAndReload = async () => {
+  const confirmed = window.confirm(
+    "Reset app cache and reload now? This will sign you out.",
+  );
+  if (!confirmed) return;
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations.map((registration) => registration.unregister()),
+      );
+    }
+
+    if ("caches" in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((key) => caches.delete(key)));
+    }
+  } catch (error) {
+    console.warn("Cache reset encountered an issue:", error);
+  }
+
+  localStorage.clear();
+  window.location.reload();
+};
+
 function renderLogin() {
   document.getElementById("app").innerHTML = `
     <div class="login-container">
@@ -1011,13 +1037,87 @@ function renderLogin() {
   syncFabVisibility();
 }
 
+function updateFabDebugBadge() {
+  let badge = document.getElementById("fab-debug-badge");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.id = "fab-debug-badge";
+    Object.assign(badge.style, {
+      position: "fixed",
+      left: "10px",
+      bottom: "10px",
+      zIndex: "2000",
+      background: "rgba(0,0,0,0.75)",
+      color: "#fff",
+      borderRadius: "8px",
+      padding: "6px 8px",
+      fontSize: "11px",
+      fontFamily: "monospace",
+      maxWidth: "85vw",
+      pointerEvents: "none",
+    });
+    document.body.appendChild(badge);
+  }
+
+  const fab = document.getElementById("add-calling-fab");
+  if (!fab) {
+    badge.textContent = "FAB debug: element missing";
+    return;
+  }
+
+  const style = window.getComputedStyle(fab);
+  const rect = fab.getBoundingClientRect();
+  badge.textContent = `FAB debug: display=${style.display} vis=${style.visibility} z=${style.zIndex} at (${Math.round(rect.left)},${Math.round(rect.top)})`;
+}
+
+function ensureResetCacheQuickAction() {
+  let button = document.getElementById("reset-cache-quick-btn");
+  if (!button) {
+    button = document.createElement("button");
+    button.id = "reset-cache-quick-btn";
+    button.type = "button";
+    button.textContent = "Reset Cache";
+    button.onclick = () => window.resetCacheAndReload();
+    Object.assign(button.style, {
+      position: "fixed",
+      right: "12px",
+      bottom: "92px",
+      zIndex: "2100",
+      padding: "9px 12px",
+      borderRadius: "8px",
+      border: "1px solid #8b1e1e",
+      background: "#c62828",
+      color: "#fff",
+      fontSize: "12px",
+      fontWeight: "700",
+      cursor: "pointer",
+      boxShadow: "0 3px 10px rgba(0,0,0,0.25)",
+    });
+    document.body.appendChild(button);
+  }
+
+  return button;
+}
+
 function syncFabVisibility() {
   const fab = document.getElementById("add-calling-fab");
-  if (!fab) return;
-
+  const quickResetButton = ensureResetCacheQuickAction();
+  const hasAuthenticatedShell = Boolean(document.querySelector(".main-header"));
   const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
-  const shouldShow = isLoggedIn && appState.currentPage === "callings";
+  const shouldShowReset = hasAuthenticatedShell || isLoggedIn;
+
+  quickResetButton.style.display = shouldShowReset ? "inline-flex" : "none";
+
+  if (!fab) {
+    updateFabDebugBadge();
+    return;
+  }
+
+  const shouldShow = hasAuthenticatedShell;
   fab.style.display = shouldShow ? "flex" : "none";
+  fab.style.visibility = shouldShow ? "visible" : "hidden";
+
+  updateFabDebugBadge();
 }
 
 function ensureCreateCallingUi() {
@@ -1048,6 +1148,8 @@ function ensureCreateCallingUi() {
     width: "60px",
     height: "60px",
     zIndex: "1500",
+    display: "flex",
+    visibility: "visible",
     alignItems: "center",
     justifyContent: "center",
   });
@@ -1102,6 +1204,7 @@ function ensureCreateCallingUi() {
   }
 
   syncFabVisibility();
+  updateFabDebugBadge();
 }
 
 window.openCreateCallingModal = () => {
@@ -1225,6 +1328,7 @@ function renderHeader() {
           ? `<button onclick="window.toggleCallingScope()">${scopeLabel}</button>`
           : ""
       }
+      <button onclick="window.resetCacheAndReload()">Reset Cache</button>
       <button onclick="localStorage.clear(); location.reload();">Sign Out</button>
     </div>
   `;
