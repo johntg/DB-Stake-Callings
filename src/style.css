@@ -930,7 +930,12 @@ select {
 
 /* Main Header Styles */
 .main-header {
-  background: #ffd43b;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 212, 55, 1) 0%,
+    rgba(255, 183, 0, 1) 98%,
+    rgba(255, 72, 0, 1) 100%
+  );
   border-radius: 0 0 20px 20px;
   padding: 20px;
   text-align: center;
@@ -940,6 +945,7 @@ select {
   flex-direction: column;
   gap: 15px;
   align-items: center;
+  border-bottom: 2px solid red;
 }
 
 .main-header-actions {
