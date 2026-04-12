@@ -627,8 +627,18 @@ function renderCards() {
         </div>
 
         <div style="padding: 18px;">
-          <h2 style="margin: 0; font-size: 1.6rem;">${row.name}</h2>
-          <p style="color: #666; margin: 4px 0;">${row.position}</p>
+          <h2
+            class="editable-field"
+            title="Click to edit name"
+            onclick="window.editCardField('${row.id}', 'name')"
+            style="margin: 0; font-size: 1.6rem;"
+          >${escapeHtml(row.name || "")}</h2>
+          <p
+            class="editable-field"
+            title="Click to edit position"
+            onclick="window.editCardField('${row.id}', 'position')"
+            style="color: #666; margin: 4px 0;"
+          >${escapeHtml(row.position || "")}</p>
           <p style="color: #c24d7c; font-weight: bold;">${row.unit}</p>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0;">
@@ -888,6 +898,56 @@ window.updateAssignment = async (id, field, value) => {
     item[field] = value || null;
   }
 
+  renderCurrentPage();
+};
+
+window.editCardField = async (id, field) => {
+  if (!["name", "position"].includes(field)) {
+    return;
+  }
+
+  const role = String(localStorage.getItem("userRole") || "").toLowerCase();
+  if (role === "viewer") {
+    alert("Viewer accounts cannot edit records.");
+    return;
+  }
+
+  const item = appState.callings.find((c) => c.id === id);
+  if (!item) {
+    alert("Could not find this record to edit.");
+    return;
+  }
+
+  const currentValue = String(item[field] || "");
+  const label = field === "name" ? "name" : "position";
+  const nextValue = window.prompt(`Edit ${label}:`, currentValue);
+
+  if (nextValue == null) {
+    return;
+  }
+
+  const cleaned = String(nextValue).trim();
+  if (!cleaned) {
+    alert(`${label[0].toUpperCase()}${label.slice(1)} cannot be empty.`);
+    return;
+  }
+
+  if (cleaned === currentValue) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("callings")
+    .update({ [field]: cleaned })
+    .eq("id", id);
+
+  if (error) {
+    console.error(`Failed to update ${field}:`, error);
+    alert(`Failed to update ${label}: ${error.message}`);
+    return;
+  }
+
+  item[field] = cleaned;
   renderCurrentPage();
 };
 
