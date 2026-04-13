@@ -1,3 +1,5 @@
+// John Harford, April 2016
+
 import "./style.css";
 
 // 1. STABLE IMPORT (Avoids the 'Failed to resolve' error)
