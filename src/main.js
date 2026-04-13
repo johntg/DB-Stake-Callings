@@ -872,7 +872,7 @@ function renderCards() {
                       ${canAssign ? "" : "disabled title='Admin password required for assignments'"}
                       style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); color: var(--text); font-size: 0.95rem;"
                     >
-                      <option value="">Select interviewer...</option>
+                      <option value="">Assignment pending...</option>
                       ${appState.assignableNames
                         .map(
                           (name) =>
@@ -909,7 +909,7 @@ function renderCards() {
                       ${canAssign ? "" : "disabled title='Admin password required for assignments'"}
                       style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); color: var(--text); font-size: 0.95rem;"
                     >
-                      <option value="">Select assignee...</option>
+                      <option value="">Assignment pending</option>
                       ${appState.assignableNames
                         .map(
                           (name) =>
@@ -961,8 +961,7 @@ function renderCards() {
                       onchange="window.updateAssignment('${row.id}', '${settingApartByField}', this.value)"
                       ${canAssign ? "" : "disabled title='Admin password required for assignments'"}
                       style="width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--white); color: var(--text); font-size: 0.95rem;"
-                    >
-                      <option value="">Select assignee...</option>
+                    >Assignment pending...</option>
                       ${appState.assignableNames
                         .map(
                           (name) =>
@@ -999,13 +998,18 @@ function renderCards() {
                       .join("")}
                   </select>
 
-                  <button
-                    onclick="window.archiveCalling('${row.id}')"
-                    ${hasAdminPasswordAccess() ? "" : "disabled title='Admin password required to archive'"}
-                    style="margin-top: 8px; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--danger-soft); color: var(--danger-text); font-weight: 700; cursor: ${hasAdminPasswordAccess() ? "pointer" : "not-allowed"};"
-                  >
-                    Archive
-                  </button>
+                  ${
+                    hasAdminPasswordAccess()
+                      ? `
+                    <button
+                      onclick="window.archiveCalling('${row.id}')"
+                      style="margin-top: 8px; width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--danger-soft); color: var(--danger-text); font-weight: 700; cursor: pointer;"
+                    >
+                      Archive
+                    </button>
+`
+                      : ""
+                  }
                 </div>
              </div>
           </div>
@@ -1320,6 +1324,7 @@ window.printReport = () => {
       </head>
       <body>
         <pre>${escapeHtml(appState.reportOutput)}</pre>
+        
       </body>
     </html>
   `);
