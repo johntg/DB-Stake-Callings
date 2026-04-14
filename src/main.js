@@ -8,6 +8,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // 2. DATABASE SETUP
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+const archiveTableName = import.meta.env.VITE_ARCHIVE_TABLE || "archive";
 const supabase =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
@@ -668,6 +669,81 @@ function canUpdateAssignmentField(field) {
   return hasAdminPasswordAccess();
 }
 
+function isArchivedStatus(value) {
+  return String(value).toLowerCase().trim() === "archived";
+}
+
+async function archiveCallingRecord(id, options = {}) {
+  const { confirm = true } = options;
+
+  if (!hasAdminPasswordAccess()) {
+    alert("Archiving requires signing in with the admin password.");
+    renderCurrentPage();
+    return false;
+  }
+
+  const item = appState.callings.find((calling) => calling.id === id);
+  if (!item) {
+    alert("Could not find this item to archive.");
+    renderCurrentPage();
+    return false;
+  }
+
+  if (confirm) {
+    const confirmed = window.confirm("Archive this item?");
+    if (!confirmed) {
+      renderCurrentPage();
+      return false;
+    }
+  }
+
+  const archivePayload = {
+    ...item,
+    status: "Archived",
+  };
+
+  const { error: insertError } = await supabase
+    .from(archiveTableName)
+    .insert([archivePayload]);
+
+  if (insertError) {
+    console.error("Archive insert error:", insertError);
+    alert(
+      `Failed to move the item to the ${archiveTableName} table: ${insertError.message}`,
+    );
+    renderCurrentPage();
+    return false;
+  }
+
+  const { error: deleteError } = await supabase
+    .from("callings")
+    .delete()
+    .eq("id", id);
+
+  if (deleteError) {
+    console.error("Archive delete error:", deleteError);
+
+    const { error: rollbackError } = await supabase
+      .from(archiveTableName)
+      .delete()
+      .eq("id", id);
+
+    if (rollbackError) {
+      console.error("Archive rollback error:", rollbackError);
+    }
+
+    alert(
+      `Failed to remove the archived item from active callings: ${deleteError.message}`,
+    );
+    renderCurrentPage();
+    return false;
+  }
+
+  appState.callings = appState.callings.filter((calling) => calling.id !== id);
+  renderCurrentPage();
+  return true;
+}
+
 async function startApp() {
   const app = document.getElementById("app");
 
@@ -1074,12 +1150,8 @@ window.updateAssignment = async (id, field, value) => {
     return;
   }
 
-  if (
-    field === "status" &&
-    String(value).toLowerCase().trim() === "archived" &&
-    !hasAdminPasswordAccess()
-  ) {
-    alert("Archiving requires signing in with the admin password.");
+  if (field === "status" && isArchivedStatus(value)) {
+    await archiveCallingRecord(id, { confirm: true });
     return;
   }
 
@@ -1192,17 +1264,7 @@ window.commitInlineEdit = async (id, field, nextValue) => {
 };
 
 window.archiveCalling = async (id) => {
-  if (!hasAdminPasswordAccess()) {
-    alert("Archiving requires signing in with the admin password.");
-    return;
-  }
-
-  const confirmed = window.confirm("Archive this item?");
-  if (!confirmed) {
-    return;
-  }
-
-  await window.updateAssignment(id, "status", "Archived");
+  await archiveCallingRecord(id, { confirm: true });
 };
 
 window.updateField = async (id, field, value) => {
