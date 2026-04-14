@@ -1364,7 +1364,7 @@ function renderLogin() {
   document.getElementById("app").innerHTML = `
     <div class="login-container">
       <div class="login-card">
-        <h2>Stake Sign In</h2>
+        <h2>Sign In</h2>
         <form onsubmit="window.login(event)">
           <select name="authName" required>
             <option value="">Select Name...</option>
