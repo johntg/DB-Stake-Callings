@@ -148,22 +148,31 @@ function buildUnitSection(unitTitle, releases, toSustain) {
   lines.push("-".repeat(unitTitle.length));
 
   if (releases.length > 0) {
-    lines.push("RELEASE - Vote of Thanks for Service:");
+    lines.push(
+      "RELEASE - The following have been released from positions in the Stake: ",
+    );
     releases.forEach((row, index) => {
       lines.push(
         `  ${index + 1}. ${row.name || "(No name)"} — ${row.position || "(No position)"}`,
       );
     });
     lines.push("");
+    lines.push(
+      "It is proposed they be given a vote of thanks for their service. Those in favour manifest it by the raising of the right hand.",
+    );
+    lines.push("");
   }
 
   if (toSustain.length > 0) {
-    lines.push("TO BE SUSTAINED:");
+    lines.push("The following have been called to positions in the Stake:");
     toSustain.forEach((row, index) => {
       lines.push(
         `  ${index + 1}. ${row.name || "(No name)"} — ${row.position || "(No position)"}`,
       );
     });
+    lines.push(
+      "It is proposed they be sustained. Those in favour manifest it by the raising of the right hand. Any opposed by the same sign",
+    );
   }
 
   return lines.join("\n");
