@@ -655,6 +655,7 @@ const callingsActions = createCallingsActions({
   renderCards,
   renderCurrentPage,
   archiveCallingRecord,
+  showConcernNoticeModal: () => window.showConcernNoticeModal(),
 });
 
 window.toggleDetails = (id) => callingsActions.toggleDetails(id);
@@ -831,6 +832,57 @@ function renderLogin() {
   syncFabVisibility();
 }
 
+function ensureConcernNoticeModal() {
+  let modal = document.getElementById("concern-notice-modal");
+  if (modal) {
+    return modal;
+  }
+
+  modal = document.createElement("div");
+  modal.id = "concern-notice-modal";
+  modal.className = "modal-overlay hidden";
+  modal.innerHTML = `
+    <section class="modal notice-modal" role="dialog" aria-modal="true" aria-labelledby="concern-notice-title">
+      <div class="modal-header notice-modal-header">
+        <h2 id="concern-notice-title">Concern Recorded</h2>
+      </div>
+      <div class="notice-modal-body">
+        <p>
+          You have indicated a concern. Please contact a member of the Stake Presidency as soon as possible.
+        </p>
+      </div>
+      <div class="btn-group notice-modal-actions">
+        <button type="button" class="btn btn-primary" onclick="window.closeConcernNoticeModal()">I understand</button>
+      </div>
+    </section>
+  `;
+
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) {
+      window.closeConcernNoticeModal();
+    }
+  });
+
+  document.body.appendChild(modal);
+  return modal;
+}
+
+window.showConcernNoticeModal = () => {
+  const modal = ensureConcernNoticeModal();
+  modal.classList.remove("hidden");
+  document.body.classList.add("modal-open");
+};
+
+window.closeConcernNoticeModal = () => {
+  const modal = document.getElementById("concern-notice-modal");
+  if (!modal) {
+    return;
+  }
+
+  modal.classList.add("hidden");
+  document.body.classList.remove("modal-open");
+};
+
 function syncFabVisibility() {
   syncFabVisibilityUi({
     hasAdminPasswordAccess,
@@ -880,6 +932,8 @@ function renderHeader() {
     isStakePasswordSession,
     ensureCreateCallingUi,
   });
+
+  ensureConcernNoticeModal();
 }
 
 startApp().catch((error) => {

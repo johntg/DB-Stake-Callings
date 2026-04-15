@@ -1032,6 +1032,39 @@ select:focus-visible {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.24);
 }
 
+.notice-modal {
+  width: min(92%, 440px);
+  border: 1px solid rgba(210, 48, 37, 0.2);
+}
+
+.notice-modal-header {
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.notice-modal-header h2 {
+  color: var(--danger-text);
+  text-align: center;
+}
+
+.notice-modal-body {
+  text-align: center;
+  color: var(--text);
+  line-height: 1.55;
+}
+
+.notice-modal-body p {
+  margin: 0;
+}
+
+.notice-modal-actions {
+  margin-top: 18px;
+}
+
+body.dark-mode .notice-modal {
+  border-color: rgba(235, 156, 255, 0.35);
+}
+
 .modal-header {
   display: flex;
   align-items: center;

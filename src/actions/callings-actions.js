@@ -11,6 +11,7 @@ export function createCallingsActions({
   renderCards,
   renderCurrentPage,
   archiveCallingRecord,
+  showConcernNoticeModal = null,
 }) {
   function canUpdateAssignmentField(field) {
     const assignmentFields = new Set(getAssignmentFieldCandidates());
@@ -110,6 +111,7 @@ export function createCallingsActions({
     const normalizedVote = String(vote || "")
       .toLowerCase()
       .trim();
+    const previousVote = getHighCouncilVoteSummary(id).currentUserVote;
 
     if (!["sustain", "concern", "clear"].includes(normalizedVote)) {
       alert("Invalid vote type.");
@@ -204,6 +206,16 @@ export function createCallingsActions({
     const summary = getHighCouncilVoteSummary(id);
     if (summary.isMajoritySustained) {
       console.log("SHC majority reached.");
+    }
+
+    if (normalizedVote === "concern" && previousVote !== "concern") {
+      if (typeof showConcernNoticeModal === "function") {
+        showConcernNoticeModal();
+      } else {
+        alert(
+          "You have indicated a concern. Please contact a member of the Stake Presidency as soon as possible.",
+        );
+      }
     }
 
     renderCurrentPage();
