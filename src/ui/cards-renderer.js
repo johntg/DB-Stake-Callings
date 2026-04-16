@@ -111,6 +111,10 @@ export function createCardsRenderer({
           appState.hcVotingTableAvailable &&
           isStakePasswordSession() &&
           voteSummary.canVote;
+        const isHcDetailsExpanded = appState.expandedHcDetailsIds.has(row.id);
+        const hasExtraHcDetails =
+          appState.hcVotingTableAvailable &&
+          (hasAdminPasswordAccess() || Boolean(row.hc_sustained_date) || isHcBypassed);
         const currentStatus = (row.status || "In Progress").trim();
         const statusOptions = [...appState.statusOptions];
         if (currentStatus && !statusOptions.includes(currentStatus)) {
@@ -149,17 +153,6 @@ export function createCardsRenderer({
                   appState.hcVotingTableAvailable
                     ? `
                   <span style="font-size: 0.78rem; color: var(--workflow-date);">Sustain: ${voteSummary.sustainCount} | Concern: ${voteSummary.concernCount} | Pending: ${voteSummary.pendingCount}</span>
-                  <span style="font-size: 0.78rem; color: var(--workflow-date);">Majority required: ${voteSummary.majorityCount || "-"} of ${voteSummary.eligibleCount}</span>
-                  ${
-                    isHcBypassed
-                      ? `<span style="font-size: 0.76rem; color: var(--danger-text); font-weight: 700;">Admin bypass enabled${row.hc_sustained_bypass_by ? ` by ${escapeHtml(row.hc_sustained_bypass_by)}` : ""}</span>`
-                      : ""
-                  }
-                  ${
-                    row.hc_sustained_date
-                      ? `<span style="font-size: 0.75rem; color: var(--workflow-date);">Majority reached: ${new Date(row.hc_sustained_date).toLocaleDateString()}</span>`
-                      : ""
-                  }
                 `
                     : `
                   <span style="font-size: 0.78rem; color: #8b1e1e; font-weight: 600;">
@@ -181,7 +174,7 @@ export function createCardsRenderer({
                       type="button"
                       onclick="window.submitHighCouncilVote('${row.id}', 'concern')"
                       style="padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); background: ${currentUserVote === "concern" ? "var(--danger-soft)" : "var(--white)"}; color: ${currentUserVote === "concern" ? "var(--danger-text)" : "var(--text)"}; font-weight: 700; cursor: pointer;"
-                    >Raise concern</button>
+                    >Concern</button>
                   </div>
                   <button
                     type="button"
@@ -193,31 +186,55 @@ export function createCardsRenderer({
                 }
 
                 ${
-                  hasAdminPasswordAccess() && appState.hcVotingTableAvailable
+                  hasExtraHcDetails
                     ? `
-                  <div style="margin-top: 4px; font-size: 0.75rem; color: var(--workflow-date); display: grid; gap: 3px;">
-                    <span><strong>Sustained by:</strong> ${voteSummary.sustainVoters.length ? escapeHtml(voteSummary.sustainVoters.join(", ")) : "None"}</span>
-                    <span><strong>Unable to sustain:</strong> ${voteSummary.concernVoters.length ? escapeHtml(voteSummary.concernVoters.join(", ")) : "None"}</span>
-                  </div>
+                  <button
+                    type="button"
+                    onclick="window.toggleHighCouncilDetails('${row.id}')"
+                    style="margin-top: 2px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--accent-border); background: var(--accent-soft); color: var(--accent-text); font-weight: 700; cursor: pointer;"
+                  >${isHcDetailsExpanded ? "▲ Hide SHC details" : "▼ Show SHC details"}</button>
                 `
                     : ""
                 }
 
                 ${
-                  hasAdminPasswordAccess()
+                  isHcDetailsExpanded && appState.hcVotingTableAvailable
                     ? `
-                  <div style="margin-top: 6px; display: grid; gap: 6px;">
-                    <button
-                      type="button"
-                      onclick="window.setHighCouncilBypass('${row.id}', ${isHcBypassed ? "false" : "true"})"
-                      style="padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border); background: ${isHcBypassed ? "var(--danger-soft)" : "var(--surface-subtle)"}; color: ${isHcBypassed ? "var(--danger-text)" : "var(--text)"}; font-weight: 700; cursor: pointer;"
-                    >${isHcBypassed ? "Disable training bypass" : "Enable training bypass (mark pass)"}</button>
+                  <div style="margin-top: 4px; display: grid; gap: 4px; font-size: 0.75rem; color: var(--workflow-date);">
+                    <span>Majority required: ${voteSummary.majorityCount || "-"} of ${voteSummary.eligibleCount}</span>
                     ${
-                      !appState.hcBypassAvailable
-                        ? `<span style="font-size: 0.72rem; color: #8b1e1e; font-weight: 600;">Bypass DB columns not found. Run migration to enable this control.</span>`
+                      isHcBypassed
+                        ? `<span style="color: var(--danger-text); font-weight: 700;">Admin bypass enabled${row.hc_sustained_bypass_by ? ` by ${escapeHtml(row.hc_sustained_bypass_by)}` : ""}</span>`
+                        : ""
+                    }
+                    ${
+                      row.hc_sustained_date
+                        ? `<span>Majority reached: ${new Date(row.hc_sustained_date).toLocaleDateString()}</span>`
                         : ""
                     }
                   </div>
+                  ${
+                    hasAdminPasswordAccess()
+                      ? `
+                    <div style="margin-top: 4px; font-size: 0.75rem; color: var(--workflow-date); display: grid; gap: 3px;">
+                      <span><strong>Sustained by:</strong> ${voteSummary.sustainVoters.length ? escapeHtml(voteSummary.sustainVoters.join(", ")) : "None"}</span>
+                      <span><strong>Unable to sustain:</strong> ${voteSummary.concernVoters.length ? escapeHtml(voteSummary.concernVoters.join(", ")) : "None"}</span>
+                    </div>
+                    <div style="margin-top: 6px; display: grid; gap: 6px;">
+                      <button
+                        type="button"
+                        onclick="window.setHighCouncilBypass('${row.id}', ${isHcBypassed ? "false" : "true"})"
+                        style="padding: 7px 8px; border-radius: 8px; border: 1px solid var(--border); background: ${isHcBypassed ? "var(--danger-soft)" : "var(--surface-subtle)"}; color: ${isHcBypassed ? "var(--danger-text)" : "var(--text)"}; font-weight: 700; cursor: pointer;"
+                      >${isHcBypassed ? "Disable training bypass" : "Enable training bypass (mark pass)"}</button>
+                      ${
+                        !appState.hcBypassAvailable
+                          ? `<span style="font-size: 0.72rem; color: #8b1e1e; font-weight: 600;">Bypass DB columns not found. Run migration to enable this control.</span>`
+                          : ""
+                      }
+                    </div>
+                  `
+                      : ""
+                  }
                 `
                     : ""
                 }

@@ -32,6 +32,15 @@ export function createCallingsActions({
     renderCards();
   }
 
+  async function toggleHighCouncilDetails(id) {
+    if (appState.expandedHcDetailsIds.has(id)) {
+      appState.expandedHcDetailsIds.delete(id);
+    } else {
+      appState.expandedHcDetailsIds.add(id);
+    }
+    renderCards();
+  }
+
   async function toggleSustainingUnits(id) {
     if (appState.expandedSustainingIds.has(id)) {
       appState.expandedSustainingIds.delete(id);
@@ -445,6 +454,7 @@ export function createCallingsActions({
 
   return {
     toggleDetails,
+    toggleHighCouncilDetails,
     toggleSustainingUnits,
     updateSustainedUnits,
     submitHighCouncilVote,

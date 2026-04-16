@@ -114,6 +114,7 @@ const appState = {
   ],
   expandedGridId: null,
   expandedSustainingIds: new Set(),
+  expandedHcDetailsIds: new Set(),
   showAllCallingsForStake: false,
   activeInlineEdit: null,
 };
@@ -662,6 +663,9 @@ window.toggleDetails = (id) => callingsActions.toggleDetails(id);
 
 window.toggleSustainingUnits = (id) =>
   callingsActions.toggleSustainingUnits(id);
+
+window.toggleHighCouncilDetails = (id) =>
+  callingsActions.toggleHighCouncilDetails(id);
 
 window.updateSustainedUnits = async (id, unitName) =>
   callingsActions.updateSustainedUnits(id, unitName);
