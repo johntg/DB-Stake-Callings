@@ -1,5 +1,3 @@
-// John Harford, April 2016
-
 import "./style.css";
 import {
   getCurrentUserName,
@@ -117,6 +115,13 @@ const appState = {
   expandedHcDetailsIds: new Set(),
   showAllCallingsForStake: false,
   activeInlineEdit: null,
+};
+
+window.openReportInReader = function () {
+  const content = appState.reportOutput || "";
+  const base = import.meta.env.BASE_URL || "/";
+  const url = `${base}report.html?content=${encodeURIComponent(content)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
 };
 
 function showFatalError(title, message) {
@@ -383,8 +388,9 @@ function renderReportsPage() {
 
   const actionButtons = appState.reportOutput
     ? `
-      <button class="btn btn-secondary" onclick="window.copyReportToClipboard()">📋 Copy Report</button>
-      <button class="btn btn-secondary" onclick="window.printReport()">🖨️ Print Report</button>
+      <button type="button" class="btn btn-secondary" onclick="window.copyReportToClipboard()">📋 Copy Report</button>
+      <button type="button" class="btn btn-secondary" onclick="window.printReport()">🖨️ Print Report</button>
+      <button type="button" class="btn btn-primary" onclick="window.openReportInReader()">READING VIEW</button>
     `
     : "";
 
@@ -395,7 +401,6 @@ function renderReportsPage() {
     </section>
 
     <section class="report-actions">
-    
       <select id="report-type" onchange="window.selectReportType(this.value)">
         <option value="sustain-setapart-release" ${appState.currentReportType === "sustain-setapart-release" ? "selected" : ""}>Sustain, Set Apart, and Release</option>
         <option value="awaiting-shc" ${appState.currentReportType === "awaiting-shc" ? "selected" : ""}>Calls/Releases Awaiting HC Sustaining</option>
@@ -403,7 +408,7 @@ function renderReportsPage() {
         <option value="assignments-by-person" ${appState.currentReportType === "assignments-by-person" ? "selected" : ""}>Assignments by Person</option>
         <option value="status-summary" ${appState.currentReportType === "status-summary" ? "selected" : ""}>Status Summary</option>
       </select>
-      <button class="btn btn-primary" onclick="window.generateCurrentReport()">Generate Report</button>
+      <button type="button" class="btn btn-primary" onclick="window.generateCurrentReport()">Generate Report</button>
     </section>
 
     <article class="card report-card">

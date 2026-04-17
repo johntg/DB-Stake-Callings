@@ -46,6 +46,10 @@
   --stake-blue: #4e5ff2;
 }
 
+#report-content {
+  white-space: pre-wrap;
+}
+
 .themePicker {
   position: absolute;
   display: flex;
